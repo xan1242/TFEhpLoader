@@ -10,8 +10,6 @@ Run it as a plugin via PPSSPP or CFW PSP and put your EHPs right next to the plu
 
 NOTE: If you're using a CFW PSP, please only load the `TF-EhpLoaderBoot.prx` plugin. This will properly boostrap `TF-EhpLoader.prx` into the userspace after the game starts. (Both `TF-EhpLoaderBoot.prx` and `TF-EhpLoader.prx` must be present!)
 
-
-
 The available EHPs are:
 
 - `cname.ehp` - character names
@@ -25,6 +23,8 @@ The available EHPs are:
 - `sysmsg.ehp` - system message text (e.g. "Checking storage media.")
 
 - `packset.ehp` - the card shop pack names
+
+To extract these files, you may use [EHPScanner](https://github.com/xan1242/EHPScanner) with a decrypted EBOOT.
 
 ## Compatibility
 
