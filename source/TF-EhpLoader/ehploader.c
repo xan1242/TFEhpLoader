@@ -304,8 +304,7 @@ void EhpLoaderInject(const char* folderPath)
 
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf("BaseAddr: 0x%X", base_addr);
-    sceKernelPrintf("BasePath: %s", basePath);
-
+    
     sceKernelPrintf("Searching functions");
 #endif
 
@@ -334,9 +333,14 @@ void EhpLoaderInject(const char* folderPath)
     
     YgSys_Ms_GetDirName(GameSerial);
     GameSerial[strlen(GameSerial) - 4] = '\0';
+
+    strcat(basePath, GameSerial);
+    strcat(basePath, "/");
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf("Detected game: %s", GameSerial);
+    sceKernelPrintf("BasePath: %s", basePath);
 #endif
+
 
     if ((strcmp(GameSerial, "ULJM05940") == 0) || (strcmp(GameSerial, "NPJH00142") == 0))
         bInTF6 = 1;
