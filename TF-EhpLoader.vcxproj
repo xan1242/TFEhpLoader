@@ -14,7 +14,7 @@
     <ProjectGuid>{358ABA7E-A197-E864-2A7E-E44F968AB41B}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>MakeFileProj</Keyword>
-    <ProjectName>TF3-EhpLoader</ProjectName>
+    <ProjectName>TF-EhpLoader</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -22,14 +22,14 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <OutDir>.\build\</OutDir>
-    <IntDir>obj\Win32\Release\TF3-EhpLoader\</IntDir>
+    <IntDir>obj\Win32\Release\TF-EhpLoader\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <OutDir>.\build\</OutDir>
-    <IntDir>obj\Win32\Debug\TF3-EhpLoader\</IntDir>
+    <IntDir>obj\Win32\Debug\TF-EhpLoader\</IntDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -42,7 +42,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <NMakeOutput>$(OutDir)TF3-EhpLoader.prx</NMakeOutput>
+    <NMakeOutput>$(OutDir)TF-EhpLoader.prx</NMakeOutput>
     <NMakeBuildCommandLine>@echo off
 setlocal EnableDelayedExpansion
 
@@ -101,7 +101,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
     <NMakePreprocessorDefinitions>_PSP_FW_VERSION=150;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeOutput>$(OutDir)TF3-EhpLoader.prx</NMakeOutput>
+    <NMakeOutput>$(OutDir)TF-EhpLoader.prx</NMakeOutput>
     <NMakeBuildCommandLine>@echo off
 setlocal EnableDelayedExpansion
 
@@ -162,15 +162,15 @@ if !errorlevel! neq 0 exit /b !errorlevel!
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include=".\source\TF3-EhpLoader\main.c" />
-    <ClCompile Include="source\TF3-EhpLoader\ehploader.c" />
+    <ClCompile Include=".\source\TF-EhpLoader\main.c" />
+    <ClCompile Include="source\TF-EhpLoader\ehploader.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".\data\plugin.ini" />
-    <None Include=".\source\TF3-EhpLoader\makefile" />
+    <None Include=".\source\TF-EhpLoader\makefile" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\TF3-EhpLoader\ehploader.h" />
+    <ClInclude Include="source\TF-EhpLoader\ehploader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

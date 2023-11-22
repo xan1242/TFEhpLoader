@@ -17,7 +17,7 @@
 
 typedef enum _EhpType
 {
-    EHP_TYPE_UNK,
+    EHP_TYPE_UNK = -1,
     EHP_TYPE_CNAME,
     EHP_TYPE_INTERFACE,
     EHP_TYPE_RCPSET,
@@ -51,6 +51,8 @@ typedef enum _EhpType
 // Function addresses
 #define FUNC_ADDR_CREATEFROMMEMORY		0x0001DF40
 #define FUNC_ADDR_SEARCHFILE			0x0001E280
+
+#define EHP_MAGIC 0x504845
 
 // Forward-declare
 void EhpLoaderInject(const char* folderPath);

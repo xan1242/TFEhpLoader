@@ -7,7 +7,7 @@
     <Filter Include="source">
       <UniqueIdentifier>{ee907bdc-a95a-4dac-bc98-25221fdb234b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\TF3-EhpLoader">
+    <Filter Include="source\TF-EhpLoader">
       <UniqueIdentifier>{b85c3f64-e2b7-4caf-825a-1d9dcf12d02e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -15,21 +15,21 @@
     <None Include=".\data\plugin.ini">
       <Filter>data</Filter>
     </None>
-    <None Include=".\source\TF3-EhpLoader\makefile">
-      <Filter>source\TF3-EhpLoader</Filter>
+    <None Include=".\source\TF-EhpLoader\makefile">
+      <Filter>source\TF-EhpLoader</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include=".\source\TF3-EhpLoader\main.c">
-      <Filter>source\TF3-EhpLoader</Filter>
+    <ClCompile Include=".\source\TF-EhpLoader\main.c">
+      <Filter>source\TF-EhpLoader</Filter>
     </ClCompile>
-    <ClCompile Include="source\TF3-EhpLoader\ehploader.c">
-      <Filter>source\TF3-EhpLoader</Filter>
+    <ClCompile Include="source\TF-EhpLoader\ehploader.c">
+      <Filter>source\TF-EhpLoader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\TF3-EhpLoader\ehploader.h">
-      <Filter>source\TF3-EhpLoader</Filter>
+    <ClInclude Include="source\TF-EhpLoader\ehploader.h">
+      <Filter>source\TF-EhpLoader</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

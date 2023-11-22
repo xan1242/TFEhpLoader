@@ -1,5 +1,5 @@
 //
-// Tag Force 3 Memory EHP loader
+// Tag Force Memory EHP loader
 // Loads EHPs into memory and overrides embedded ones in the executable
 // 
 // by xan1242 / Tenjoin 
@@ -16,12 +16,13 @@
 #include <string.h>
 
 #include "../../includes/psp/injector.h"
+#include "../../includes/psp/patterns.h"
 
 #include "ehploader.h"
 #include "../../includes/psp/pspmallochelper.h"
 
 #define MODULE_NAME_INTERNAL "modehsys"
-#define MODULE_NAME "TF3-EhpLoader"
+#define MODULE_NAME "TF-EhpLoader"
 
 #define MODULE_VERSION_MAJOR 1
 #define MODULE_VERSION_MINOR 0
@@ -95,6 +96,7 @@ void CheckModules()
                 logPrintf("text_addr: 0x%X\ntext_size: 0x%X", info.text_addr, info.text_size);
 #endif
                 injector.SetGameBaseAddress(info.text_addr, info.text_size);
+                pattern.SetGameBaseAddress(info.text_addr, info.text_size);
 
                 bFoundMainModule = 1;
             }
@@ -136,6 +138,8 @@ void CheckModulesPSP()
 
     injector.SetGameBaseAddress(mod.text_addr, mod.text_size);
     injector.SetModuleBaseAddress(this_module.text_addr, this_module.text_addr);
+
+    pattern.SetGameBaseAddress(mod.text_addr, mod.text_size);
 
     MainInit(base_path);
 }
@@ -223,6 +227,7 @@ int MainInit(const char* basePath) {
     if (completePath == NULL)
     {
         sceKernelDcacheWritebackAll();
+        sceKernelIcacheClearAll();
         return 0;
     }
     strcpy(completePath, basePath);
@@ -233,6 +238,7 @@ int MainInit(const char* basePath) {
     psp_free(completePath);
 
     sceKernelDcacheWritebackAll();
+    sceKernelIcacheClearAll();
     
     return 0;
 }

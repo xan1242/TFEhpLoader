@@ -1,6 +1,6 @@
-TARGET = ../../build/TF3-EhpLoader
+TARGET = ../../build/TF-EhpLoader
 # include more objs here depending on what you use (e.g. "../../includes/psp/mips.o")
-OBJS = main.o ehploader.o exports.o ../../includes/psp/pspmallochelper.o ../../includes/psp/mips.o ../../includes/psp/injector.o
+OBJS = main.o ehploader.o exports.o ../../includes/psp/pspmallochelper.o ../../includes/psp/mips.o ../../includes/psp/injector.o ../../includes/psp/patterns.o
 
 CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -fpack-struct=16
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti

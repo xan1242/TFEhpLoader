@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33712.159
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TF3-EhpLoader", "TF3-EhpLoader.vcxproj", "{358ABA7E-A197-E864-2A7E-E44F968AB41B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TF-EhpLoader", "TF-EhpLoader.vcxproj", "{358ABA7E-A197-E864-2A7E-E44F968AB41B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TF3-EhpLoaderBoot", "TF3-EhpLoaderBoot.vcxproj", "{97CF17A1-108A-4853-AE3E-047E2055393B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TF-EhpLoaderBoot", "TF-EhpLoaderBoot.vcxproj", "{97CF17A1-108A-4853-AE3E-047E2055393B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

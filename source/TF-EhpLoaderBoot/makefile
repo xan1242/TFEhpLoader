@@ -1,4 +1,4 @@
-TARGET = ../../build/TF3-EhpLoaderBoot
+TARGET = ../../build/TF-EhpLoaderBoot
 OBJS = main.o exports.o
 
 CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -fpack-struct=16

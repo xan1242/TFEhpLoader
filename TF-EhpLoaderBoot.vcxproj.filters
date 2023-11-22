@@ -4,18 +4,18 @@
     <Filter Include="source">
       <UniqueIdentifier>{ee907bdc-a95a-4dac-bc98-25221fdb234b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\TF3-EhpLoaderBoot">
+    <Filter Include="source\TF-EhpLoaderBoot">
       <UniqueIdentifier>{b85c3f64-e2b7-4caf-825a-1d9dcf12d02e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include=".\source\TF3-EhpLoaderBoot\makefile">
-      <Filter>source\TF3-EhpLoaderBoot</Filter>
+    <None Include=".\source\TF-EhpLoaderBoot\makefile">
+      <Filter>source\TF-EhpLoaderBoot</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include=".\source\TF3-EhpLoaderBoot\main.c">
-      <Filter>source\TF3-EhpLoaderBoot</Filter>
+    <ClCompile Include=".\source\TF-EhpLoaderBoot\main.c">
+      <Filter>source\TF-EhpLoaderBoot</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -14,7 +14,7 @@
 #include <pspkernel.h>
 #include <stdio.h>
 #include <string.h>
-#include <module2.h>
+// #include <module2.h>
 
 // Define the name of the game's main module here
 // This is the same one we define in PSPModBase
@@ -24,7 +24,7 @@
 // Define the name of your userspace module here
 // This is the name of the module that we'll boot up.
 // This is the module at the same path as this booter module.
-#define MODULE_BOOT_TARGET "TF3-EhpLoader.prx"
+#define MODULE_BOOT_TARGET "TF-EhpLoader.prx"
 
 // (optional) Define the name of the game's main thread here
 // If defined, the bootstrapper will suspend the thread defined here
@@ -32,7 +32,7 @@
 #define MODULE_INTERNAL_THREAD_NAME "user_main"
 
 // This is the name of this module that will be presented to the PSP OS.
-#define MODULE_NAME "TF3-EhpLoaderBoot"
+#define MODULE_NAME "TF-EhpLoaderBoot"
 // This is the name of the thread that will be presented to the PSP OS.
 #define BOOTER_THREAD_NAME "ThModBoot"
 
