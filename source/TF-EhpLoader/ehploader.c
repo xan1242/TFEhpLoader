@@ -19,8 +19,7 @@
 // undefine for debug logging via sceKernelPrintf
 //#define EHPLOADER_DEBUG_PRINTS
 
-void (*EhFolder_CreateFromMemory)(int unk, void* ehppointer) = (void (*)(int, void*))FUNC_ADDR_CREATEFROMMEMORY;
-//uintptr_t(*EhFolder_SearchFile)(void* ehfolder, char* filename, int unk) = (uintptr_t(*)(void*, char*, int))FUNC_ADDR_SEARCHFILE;
+void (*EhFolder_CreateFromMemory)(int unk, void* ehppointer) = (void (*)(int, void*))0x1DF40;
 uintptr_t(*lEhFolder_SearchFile)(uintptr_t pEhFolder, char* filename) = (uintptr_t(*)(uintptr_t, char*))0x1E270;
 uint32_t(*lEhFolder_GetFileSizeSub)(uintptr_t ptr, uintptr_t handle) = (uint32_t(*)(uintptr_t, uintptr_t))0x1E600;
 void(*YgSys_Ms_GetDirName)(char* out) = (void(*)(char*))0x61548; // address in TF1 JP
