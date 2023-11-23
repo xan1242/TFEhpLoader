@@ -8,7 +8,7 @@ This is a useful tool for translators and modders since it avoids the nasty proc
 
 Run it as a plugin via PPSSPP or CFW PSP and put your EHPs right next to the plugin in a folder called `ehps/<game_serial>` (where `<game_serial>` is the serial number of the game, example `ULES01183`).
 
-NOTE: If you're using a CFW PSP, please only load the `TF-EhpLoaderBoot.prx` plugin. This will properly boostrap `TF-EhpLoader.prx` into the userspace after the game starts. (Both `TF-EhpLoaderBoot.prx` and `TF-EhpLoader.prx` must be present!)
+
 
 The available EHPs are:
 
@@ -25,6 +25,24 @@ The available EHPs are:
 - `packset.ehp` - the card shop pack names
 
 To extract these files, you may use [EHPScanner](https://github.com/xan1242/EHPScanner) with a decrypted EBOOT.
+
+### PPSSPP Note
+
+Be sure to add your game serial to the `games` section in  the included`plugin.ini`!
+
+If you do not do this, the plugin will not load!
+
+Example:
+
+```ini
+[games]
+ULES01183 = true
+; add other IDs here
+```
+
+### PSP Note
+
+If you're using a CFW PSP, please only load the `TF-EhpLoaderBoot.prx` plugin. This will properly boostrap `TF-EhpLoader.prx` into the userspace after the game starts. (Both `TF-EhpLoaderBoot.prx` and `TF-EhpLoader.prx` must be present!)
 
 ## Compatibility
 
