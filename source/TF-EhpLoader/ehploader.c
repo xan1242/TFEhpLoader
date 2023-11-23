@@ -321,6 +321,15 @@ void EhpLoaderInject(const char* folderPath)
     // try to find YgSys_Ms_GetDirPath and derive from that
     // get it from lYgSysDLFile_GetFileList via a universal pattern
     uintptr_t ptr_lYgSysDLFile_GetFileList_4998C = pattern.get_first("28 00 00 ? ? ? ? 60 01 06 ?", 0) + 7;
+
+    // failsafe - no pattern = not in the right game
+    if (ptr_lYgSysDLFile_GetFileList_4998C == 0)
+    {
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf("ERROR: Cannot detect Tag Force! Exiting...");
+#endif
+        return;
+    }
     
     // find the first call after the memset within 6 instructions
     uintptr_t ptr_ptr_YgSys_Ms_GetDirPath = FindFirstJAL(ptr_lYgSysDLFile_GetFileList_4998C, 6);
