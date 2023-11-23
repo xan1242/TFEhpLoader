@@ -227,7 +227,7 @@ int MainInit(const char* basePath) {
     if (completePath == NULL)
     {
         sceKernelDcacheWritebackAll();
-        sceKernelIcacheClearAll();
+        //sceKernelIcacheClearAll();
         return 0;
     }
     strcpy(completePath, basePath);
@@ -238,7 +238,7 @@ int MainInit(const char* basePath) {
     psp_free(completePath);
 
     sceKernelDcacheWritebackAll();
-    sceKernelIcacheClearAll();
+    //sceKernelIcacheClearAll();
     
     return 0;
 }
