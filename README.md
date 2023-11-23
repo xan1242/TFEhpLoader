@@ -49,3 +49,7 @@ If you're using a CFW PSP, please only load the `TF-EhpLoaderBoot.prx` plugin. T
 This should work with all Tag Force games.
 
 This should also work on PPSSPP and real hardware (via the bootstrap plugin).
+
+## Building
+
+You may follow the same build instructions as per [PSPModBase here](https://github.com/xan1242/PSPModBase#usage).
