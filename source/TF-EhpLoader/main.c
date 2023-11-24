@@ -42,7 +42,6 @@ int MainInit(const char* basePath);
 int bPPSSPP = 0;
 static STMOD_HANDLER previous;
 
-#define EHP_SUBFOLDER_NAME "ehps"
 char base_path[128];
 
 #ifdef LOG
@@ -221,8 +220,7 @@ int MainInit(const char* basePath) {
 #endif
 
     size_t basePathLen = strlen(basePath);
-    size_t foldernameLen = sizeof(EHP_SUBFOLDER_NAME);
-    size_t totalLen = basePathLen + foldernameLen + 2;
+    size_t totalLen = basePathLen + 2;
     char* completePath = (char*)psp_malloc(totalLen);
     if (completePath == NULL)
     {
@@ -231,7 +229,6 @@ int MainInit(const char* basePath) {
         return 0;
     }
     strcpy(completePath, basePath);
-    strcat(completePath, EHP_SUBFOLDER_NAME "/");
 
     EhpLoaderInject(completePath);
 

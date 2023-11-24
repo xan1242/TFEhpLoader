@@ -8,6 +8,9 @@
 #define EHP_NAME_SYSMSG				"sysmsg.ehp"
 #define EHP_NAME_PACKSET			"packset.ehp"
 
+#define EHP_SUBFOLDER_NAME "ehps"
+#define EHP_UMDLOAD_FLAGFILENAME "UMDLOAD.txt"
+
 typedef enum _EhpType
 {
     EHP_TYPE_UNK = -1,

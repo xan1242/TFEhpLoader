@@ -17,7 +17,7 @@
 #include "../../includes/psp/pspmallochelper.h"
 
 // undefine for debug logging via sceKernelPrintf
-//#define EHPLOADER_DEBUG_PRINTS
+#define EHPLOADER_DEBUG_PRINTS
 
 void (*EhFolder_CreateFromMemory)(int unk, void* ehppointer) = (void (*)(int, void*))0x1DF40;
 uintptr_t(*lEhFolder_SearchFile)(uintptr_t pEhFolder, char* filename) = (uintptr_t(*)(uintptr_t, char*))0x1E270;
@@ -297,6 +297,8 @@ uintptr_t GetJALDestination(uint32_t instruction)
 
 void EhpLoaderInject(const char* folderPath)
 {
+    // TODO: hook lSoftReset and reload this plugin on reset !!
+
     //sceKernelDelayThread(100000);
     strcpy(basePath, folderPath);
     base_addr = injector.base_addr;
@@ -308,6 +310,7 @@ void EhpLoaderInject(const char* folderPath)
 #endif
 
     int bInTF6 = 0;
+    int bUMDLoad = 0;
     
     uintptr_t ptr_lEhFolder_SearchFile = 0;
     uintptr_t ptr_lEhFolder_GetFileSizeSub = 0;
@@ -330,6 +333,23 @@ void EhpLoaderInject(const char* folderPath)
 #endif
         return;
     }
+
+    char* flagFilePath = (char*)psp_malloc(strlen(basePath) + 1 + sizeof(EHP_UMDLOAD_FLAGFILENAME));
+    strcpy(flagFilePath, basePath);
+    strcat(flagFilePath, EHP_UMDLOAD_FLAGFILENAME);
+    SceUID f = sceIoOpen(flagFilePath, PSP_O_RDONLY, 0);
+    if (f < 0)
+        bUMDLoad = 0;
+    else
+    {
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf("UMDLOAD enabled!");
+#endif
+        bUMDLoad = 1;
+        sceIoClose(f);
+    }
+    psp_free(flagFilePath);
+
     
     // find the first call after the memset within 6 instructions
     uintptr_t ptr_ptr_YgSys_Ms_GetDirPath = FindFirstJAL(ptr_lYgSysDLFile_GetFileList_4998C, 6);
@@ -342,13 +362,21 @@ void EhpLoaderInject(const char* folderPath)
     YgSys_Ms_GetDirName(GameSerial);
     GameSerial[strlen(GameSerial) - 4] = '\0';
 
-    strcat(basePath, GameSerial);
-    strcat(basePath, "/");
+    if (bUMDLoad)
+    {
+        strcpy(basePath, "disc0:/PSP_GAME/USRDIR/" EHP_SUBFOLDER_NAME "/");
+    }
+    else
+    {
+        strcat(basePath, EHP_SUBFOLDER_NAME "/");
+        strcat(basePath, GameSerial);
+        strcat(basePath, "/");
+    }
+
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf("Detected game: %s", GameSerial);
     sceKernelPrintf("BasePath: %s", basePath);
 #endif
-
 
     if ((strcmp(GameSerial, "ULJM05940") == 0) || (strcmp(GameSerial, "NPJH00142") == 0))
         bInTF6 = 1;
