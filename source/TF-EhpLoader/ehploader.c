@@ -16,7 +16,7 @@
 #include "ehploader.h"
 #include "../../includes/psp/pspmallochelper.h"
 
-// undefine for debug logging via sceKernelPrintf
+// uncomment for debug logging via sceKernelPrintf
 //#define EHPLOADER_DEBUG_PRINTS
 
 void (*EhFolder_CreateFromMemory)(int unk, void* ehppointer) = (void (*)(int, void*))0x1DF40;
@@ -304,6 +304,8 @@ void EhpLoaderInject(const char* folderPath)
     base_addr = injector.base_addr;
 
 #ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "Tag Force EhFolder Loader v%d.%d", MODULE_VERSION_MAJOR, MODULE_VERSION_MINOR);
+
     sceKernelPrintf(MODULE_NAME ": " "BaseAddr: 0x%X", base_addr);
     
     sceKernelPrintf(MODULE_NAME ": " "Searching functions");
