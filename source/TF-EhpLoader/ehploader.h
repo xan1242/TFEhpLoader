@@ -5,7 +5,7 @@
 #define MODULE_NAME "TF-EhpLoader"
 
 #define MODULE_VERSION_MAJOR 1
-#define MODULE_VERSION_MINOR 0
+#define MODULE_VERSION_MINOR 1
 
 #define EHP_NAME_CNAME				"cname.ehp"
 #define EHP_NAME_INTERFACE			"interface.ehp"
