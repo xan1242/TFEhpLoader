@@ -1,6 +1,12 @@
 #ifndef EHPLOADER_H
 #define EHPLOADER_H
 
+#define MODULE_NAME_INTERNAL "modehsys"
+#define MODULE_NAME "TF-EhpLoader"
+
+#define MODULE_VERSION_MAJOR 1
+#define MODULE_VERSION_MINOR 0
+
 #define EHP_NAME_CNAME				"cname.ehp"
 #define EHP_NAME_INTERFACE			"interface.ehp"
 #define EHP_NAME_RCPSET				"rcpset.ehp"

@@ -21,12 +21,6 @@
 #include "ehploader.h"
 #include "../../includes/psp/pspmallochelper.h"
 
-#define MODULE_NAME_INTERNAL "modehsys"
-#define MODULE_NAME "TF-EhpLoader"
-
-#define MODULE_VERSION_MAJOR 1
-#define MODULE_VERSION_MINOR 0
-
 // Uncomment for logging
 // We use a global definition like so to reduce final binary size (which is very important because PSP is memory constrained!)
 //#define LOG

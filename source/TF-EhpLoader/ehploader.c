@@ -39,7 +39,7 @@ void* LoadFileToMem(const char* path)
     if (res < 0)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("sceIoGetstat fail! 0x%X\n", res);
+        sceKernelPrintf(MODULE_NAME ": " "sceIoGetstat fail! 0x%X\n", res);
 #endif
         return NULL;
     }
@@ -51,7 +51,7 @@ void* LoadFileToMem(const char* path)
     if (f < 0)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("sceIoOpen fail! 0x%X\n", f);
+        sceKernelPrintf(MODULE_NAME ": " "sceIoOpen fail! 0x%X\n", f);
 #endif
         return NULL;
     }
@@ -107,13 +107,13 @@ void* GetEhpPtr(EhpType type)
 void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
 {
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("EhFolder_CreateFromMemory (0x%X)", ptr);
+    sceKernelPrintf(MODULE_NAME ": " "EhFolder_CreateFromMemory (0x%X)", ptr);
 #endif
 
     EhpType type = DetectType(ptr);
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("CreateFromMemory detected type: %d", type);
+    sceKernelPrintf(MODULE_NAME ": " "CreateFromMemory detected type: %d", type);
 #endif
     if (type == EHP_TYPE_UNK)
         return EhFolder_CreateFromMemory(unk, ptr);
@@ -131,7 +131,7 @@ void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
     if (completePath == NULL)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("String malloc failure!");
+        sceKernelPrintf(MODULE_NAME ": " "String malloc failure!");
 #endif
         return EhFolder_CreateFromMemory(unk, ptr);
     }
@@ -139,13 +139,13 @@ void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
     strcat(completePath, filename);
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("Loading: %s", completePath);
+    sceKernelPrintf(MODULE_NAME ": " "Loading: %s", completePath);
 #endif
     void* memFile = LoadFileToMem(completePath);
     if (memFile == NULL)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("LoadFileToMem failure!");
+        sceKernelPrintf(MODULE_NAME ": " "LoadFileToMem failure!");
 #endif
         psp_free(completePath);
         return EhFolder_CreateFromMemory(unk, ptr);
@@ -157,7 +157,7 @@ void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
     EhFolder_CreateFromMemory(unk, memFile);
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("Load successful, addr: 0x%X", memFile);
+    sceKernelPrintf(MODULE_NAME ": " "Load successful, addr: 0x%X", memFile);
 #endif
 
     return;
@@ -200,7 +200,7 @@ uintptr_t EhFolder_SearchFile_Hook(uintptr_t ptrMemEhFolder, char* filename, uin
     if (ptrNewEhp == NULL)
         return EhFolder_SearchFile(ptrMemEhFolder, filename, unk);
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("SearchFile: %s/%s", GetTypeFilename(type), filename);
+    sceKernelPrintf(MODULE_NAME ": " "SearchFile: %s/%s", GetTypeFilename(type), filename);
 #endif
 
     return EhFolder_SearchFile((uintptr_t)ptrNewEhp, filename, unk);
@@ -304,9 +304,9 @@ void EhpLoaderInject(const char* folderPath)
     base_addr = injector.base_addr;
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("BaseAddr: 0x%X", base_addr);
+    sceKernelPrintf(MODULE_NAME ": " "BaseAddr: 0x%X", base_addr);
     
-    sceKernelPrintf("Searching functions");
+    sceKernelPrintf(MODULE_NAME ": " "Searching functions");
 #endif
 
     int bInTF6 = 0;
@@ -329,7 +329,7 @@ void EhpLoaderInject(const char* folderPath)
     if (ptr_lYgSysDLFile_GetFileList_4998C == 0)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("ERROR: Cannot detect Tag Force! Exiting...");
+        sceKernelPrintf(MODULE_NAME ": " "ERROR: Cannot detect Tag Force! Exiting...");
 #endif
         return;
     }
@@ -343,7 +343,7 @@ void EhpLoaderInject(const char* folderPath)
     else
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf("UMDLOAD enabled!");
+        sceKernelPrintf(MODULE_NAME ": " "UMDLOAD enabled!");
 #endif
         bUMDLoad = 1;
         sceIoClose(f);
@@ -374,8 +374,8 @@ void EhpLoaderInject(const char* folderPath)
     }
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("Detected game: %s", GameSerial);
-    sceKernelPrintf("BasePath: %s", basePath);
+    sceKernelPrintf(MODULE_NAME ": " "Detected game: %s", GameSerial);
+    sceKernelPrintf(MODULE_NAME ": " "BasePath: %s", basePath);
 #endif
 
     if ((strcmp(GameSerial, "ULJM05940") == 0) || (strcmp(GameSerial, "NPJH00142") == 0))
@@ -406,13 +406,13 @@ void EhpLoaderInject(const char* folderPath)
 
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("lEhFolder_SearchFile: 0x%X", ptr_lEhFolder_SearchFile);
-    sceKernelPrintf("lEhFolder_GetFileSizeSub: 0x%X", ptr_lEhFolder_GetFileSizeSub);
-    sceKernelPrintf("EhFolder_CreateFromMemory: 0x%X", ptr_EhFolder_CreateFromMemory);
-    sceKernelPrintf("EhFolder_SearchFile: 0x%X", ptr_EhFolder_SearchFile);
-    sceKernelPrintf("YgSys_InitApplication: 0x%X", ptr_YgSys_InitApplication);
+    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_SearchFile: 0x%X", ptr_lEhFolder_SearchFile);
+    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_GetFileSizeSub: 0x%X", ptr_lEhFolder_GetFileSizeSub);
+    sceKernelPrintf(MODULE_NAME ": " "EhFolder_CreateFromMemory: 0x%X", ptr_EhFolder_CreateFromMemory);
+    sceKernelPrintf(MODULE_NAME ": " "EhFolder_SearchFile: 0x%X", ptr_EhFolder_SearchFile);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_InitApplication: 0x%X", ptr_YgSys_InitApplication);
 
-    sceKernelPrintf("Function search done");
+    sceKernelPrintf(MODULE_NAME ": " "Function search done");
 #endif
 
     // update func addresses
@@ -447,7 +447,7 @@ void EhpLoaderInject(const char* folderPath)
         {
             injector.MakeCALL(ptrJalHook, (uintptr_t)&EhFolder_CreateFromMemory_Hook);
 #ifdef EHPLOADER_DEBUG_PRINTS
-            sceKernelPrintf("Hooking EhFolder_CreateFromMemory: 0x%X", ptrJalHook);
+            sceKernelPrintf(MODULE_NAME ": " "Hooking EhFolder_CreateFromMemory: 0x%X", ptrJalHook);
 #endif
             ptrJalHook += 4;
             numEHP++;
@@ -508,12 +508,12 @@ void EhpLoaderInject(const char* folderPath)
     }
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf("===EhFolder ptrs:===");
-    sceKernelPrintf("CNAME: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_CNAME]);
-    sceKernelPrintf("INTERFACE: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_INTERFACE]);
-    sceKernelPrintf("RCPSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_RCPSET]);
-    sceKernelPrintf("LOAD_FL: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL]);
-    sceKernelPrintf("SYSMSG: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_SYSMSG]);
-    sceKernelPrintf("PACKSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_PACKSET]);
+    sceKernelPrintf(MODULE_NAME ": " "===EhFolder ptrs:===");
+    sceKernelPrintf(MODULE_NAME ": " "CNAME: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_CNAME]);
+    sceKernelPrintf(MODULE_NAME ": " "INTERFACE: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_INTERFACE]);
+    sceKernelPrintf(MODULE_NAME ": " "RCPSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_RCPSET]);
+    sceKernelPrintf(MODULE_NAME ": " "LOAD_FL: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL]);
+    sceKernelPrintf(MODULE_NAME ": " "SYSMSG: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_SYSMSG]);
+    sceKernelPrintf(MODULE_NAME ": " "PACKSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_PACKSET]);
 #endif
 }
