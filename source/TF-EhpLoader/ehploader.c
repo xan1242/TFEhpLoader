@@ -17,7 +17,7 @@
 #include "../../includes/psp/pspmallochelper.h"
 
 // undefine for debug logging via sceKernelPrintf
-#define EHPLOADER_DEBUG_PRINTS
+//#define EHPLOADER_DEBUG_PRINTS
 
 void (*EhFolder_CreateFromMemory)(int unk, void* ehppointer) = (void (*)(int, void*))0x1DF40;
 uintptr_t(*lEhFolder_SearchFile)(uintptr_t pEhFolder, char* filename) = (uintptr_t(*)(uintptr_t, char*))0x1E270;
