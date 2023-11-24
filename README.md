@@ -8,8 +8,6 @@ This is a useful tool for translators and modders since it avoids the nasty proc
 
 Run it as a plugin via PPSSPP or CFW PSP and put your EHPs right next to the plugin in a folder called `ehps/<game_serial>` (where `<game_serial>` is the serial number of the game, example `ULES01183`).
 
-
-
 The available EHPs are:
 
 - `cname.ehp` - character names
@@ -43,6 +41,14 @@ ULES01183 = true
 ### PSP Note
 
 If you're using a CFW PSP, please only load the `TF-EhpLoaderBoot.prx` plugin. This will properly boostrap `TF-EhpLoader.prx` into the userspace after the game starts. (Both `TF-EhpLoaderBoot.prx` and `TF-EhpLoader.prx` must be present!)
+
+### Loading from UMD
+
+If you want your EHP files to load from the UMD instead, create a file `UMDLOAD.txt` right next to the plugin.
+
+The path on UMD should then be: `disc0:/PSP_GAME/USRDIR/ehps`. 
+
+Make sure you create the UMD image with a tool such as UMDGen at least once before replacing any files with other ISO tools.
 
 ## Compatibility
 
