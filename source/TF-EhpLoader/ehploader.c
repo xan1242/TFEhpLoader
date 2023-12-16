@@ -32,6 +32,81 @@ char GameSerial[32];
 void* ptrEhpFiles[EHP_TYPE_COUNT];
 void* ptrEhpFilesOriginal[EHP_TYPE_COUNT];
 
+//
+// Custom memory allocator - reuse the EhFolder space in EBOOT if at all possible!
+//
+
+size_t ehpSizes[EHP_TYPE_COUNT];
+int ehpAllocSpaces[EHP_TYPE_COUNT];
+
+size_t calculate_aligned_size(size_t size, size_t alignment) 
+{
+    size_t aligned_size = size + (alignment - (size % alignment)) % alignment;
+    return aligned_size;
+}
+
+size_t ehploader_largest_malloc()
+{
+    size_t largest = 0;
+    int largest_idx = 0;
+    for (int i = 0; i < EHP_TYPE_COUNT; i++)
+    {
+        if (ehpAllocSpaces[i] > largest)
+        {
+            largest = ehpAllocSpaces[i];
+            largest_idx = i;
+        }
+    }
+
+    return largest;
+}
+
+void* ehploader_malloc(size_t size)
+{
+    size_t align_size = calculate_aligned_size(size, 4);
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "alloc_size: 0x%X\taligned: 0x%X\n", size, align_size);
+#endif
+
+    if (align_size > ehploader_largest_malloc())
+    {
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf(MODULE_NAME ": " "alloc too large to fit in executable space! allocing normally...", size, align_size);
+#endif
+        return psp_malloc(size);
+    }
+    // find the most appropriate buffer
+
+    // find the smallest buffer it can fit into
+    int smallest = -1;
+    int small_diff = INT32_MAX;
+    for (int i = 0; i < EHP_TYPE_COUNT; i++)
+    {
+        int diff = ehpAllocSpaces[i] - align_size;
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf(MODULE_NAME ": " "diff: 0x%X\n", diff);
+#endif
+        if ((diff >= 0) && (diff < small_diff))
+        {
+            smallest = i;
+            small_diff = diff;
+        }
+    }
+
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "smallest: %d\n", smallest, small_diff);
+#endif
+
+    uintptr_t result = (uintptr_t)ptrEhpFilesOriginal[smallest] + (ehpSizes[smallest] - ehpAllocSpaces[smallest]);
+    ehpAllocSpaces[smallest] -= align_size;
+
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "remaining space: 0x%X\n", ehpAllocSpaces[smallest]);
+#endif
+
+    return (void*)result;
+}
+
 void* LoadFileToMem(const char* path)
 {
     SceIoStat st = { 0 };
@@ -43,7 +118,14 @@ void* LoadFileToMem(const char* path)
 #endif
         return NULL;
     }
-    void* out = psp_malloc(st.st_size);
+
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "size: 0x%X\n", *(uint32_t*)(&st.st_size));
+#endif
+    void* out = ehploader_malloc(st.st_size);
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "ptr: 0x%X\n", out);
+#endif
     if (out == NULL)
         return NULL;
 
@@ -516,13 +598,22 @@ void EhpLoaderInject(const char* folderPath)
         ptrEhpFilesOriginal[EHP_TYPE_PACKSET] = (void*)EhpPtrs[EHP_TYPE_PACKSET];
     }
 
+    for (int i = 0; i < EHP_TYPE_COUNT; i++)
+    {
+        if (ptrEhpFilesOriginal[i] != NULL)
+        {
+            ehpSizes[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+            ehpAllocSpaces[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+        }
+    }
+
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "===EhFolder ptrs:===");
-    sceKernelPrintf(MODULE_NAME ": " "CNAME: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_CNAME]);
-    sceKernelPrintf(MODULE_NAME ": " "INTERFACE: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_INTERFACE]);
-    sceKernelPrintf(MODULE_NAME ": " "RCPSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_RCPSET]);
-    sceKernelPrintf(MODULE_NAME ": " "LOAD_FL: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL]);
-    sceKernelPrintf(MODULE_NAME ": " "SYSMSG: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_SYSMSG]);
-    sceKernelPrintf(MODULE_NAME ": " "PACKSET: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_PACKSET]);
+    sceKernelPrintf(MODULE_NAME ": " "CNAME: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_CNAME], ehpSizes[EHP_TYPE_CNAME]);
+    sceKernelPrintf(MODULE_NAME ": " "INTERFACE: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_INTERFACE], ehpSizes[EHP_TYPE_INTERFACE]);
+    sceKernelPrintf(MODULE_NAME ": " "RCPSET: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_RCPSET], ehpSizes[EHP_TYPE_RCPSET]);
+    sceKernelPrintf(MODULE_NAME ": " "LOAD_FL: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL], ehpSizes[EHP_TYPE_LOAD_FL]);
+    sceKernelPrintf(MODULE_NAME ": " "SYSMSG: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_SYSMSG], ehpSizes[EHP_TYPE_SYSMSG]);
+    sceKernelPrintf(MODULE_NAME ": " "PACKSET: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_PACKSET], ehpSizes[EHP_TYPE_PACKSET]);
 #endif
 }
