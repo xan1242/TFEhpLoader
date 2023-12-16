@@ -11,7 +11,7 @@
 #include <pspuser.h>
 #include <stdio.h>
 #include <kubridge.h>
-#include "../../includes/psp/injector.h"
+#include "../../includes/psp/minjector.h"
 #include "../../includes/psp/patterns.h"
 #include "ehploader.h"
 #include "../../includes/psp/pspmallochelper.h"
@@ -24,6 +24,10 @@ uintptr_t(*lEhFolder_SearchFile)(uintptr_t pEhFolder, char* filename) = (uintptr
 uint32_t(*lEhFolder_GetFileSizeSub)(uintptr_t ptr, uintptr_t handle) = (uint32_t(*)(uintptr_t, uintptr_t))0x1E600;
 void(*YgSys_Ms_GetDirName)(char* out) = (void(*)(char*))0x61548; // address in TF1 JP
 
+int (*YgSys_strcmp)(const char*, const char*) = (int (*)(const char*, const char*))(0);
+size_t(*YgSys_strlen)(const char* str) = (size_t(*)(const char*))(0);
+char* (*YgSys_strcpy)(char* dst, const char* src) = (char* (*)(char*, const char*))(0);
+char* (*YgSys_strcat)(char* dst, const char* src) = (char* (*)(char*, const char*))(0);
 
 uintptr_t base_addr = 0;
 char basePath[128];
@@ -31,6 +35,32 @@ char GameSerial[32];
 
 void* ptrEhpFiles[EHP_TYPE_COUNT];
 void* ptrEhpFilesOriginal[EHP_TYPE_COUNT];
+
+char* tf_strstr(register char* string, char* substring)
+{
+    register char* a, * b;
+
+    b = substring;
+    if (*b == 0) {
+        return string;
+    }
+    for (; *string != 0; string += 1) {
+        if (*string != *b) {
+            continue;
+        }
+        a = string;
+        while (1) {
+            if (*b == 0) {
+                return string;
+            }
+            if (*a++ != *b++) {
+                break;
+            }
+        }
+        b = substring;
+    }
+    return NULL;
+}
 
 //
 // Custom memory allocator - reuse the EhFolder space in EBOOT if at all possible!
@@ -68,10 +98,11 @@ void* ehploader_malloc(size_t size)
     sceKernelPrintf(MODULE_NAME ": " "alloc_size: 0x%X\taligned: 0x%X\n", size, align_size);
 #endif
 
-    if (align_size > ehploader_largest_malloc())
+    size_t maxalloc = ehploader_largest_malloc();
+    if (align_size > maxalloc)
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf(MODULE_NAME ": " "alloc too large to fit in executable space! allocing normally...", size, align_size);
+        sceKernelPrintf(MODULE_NAME ": " "alloc too large to fit in executable space (max: 0x%X)! allocing normally...", maxalloc);
 #endif
         return psp_malloc(size);
     }
@@ -83,9 +114,6 @@ void* ehploader_malloc(size_t size)
     for (int i = 0; i < EHP_TYPE_COUNT; i++)
     {
         int diff = ehpAllocSpaces[i] - align_size;
-#ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf(MODULE_NAME ": " "diff: 0x%X\n", diff);
-#endif
         if ((diff >= 0) && (diff < small_diff))
         {
             smallest = i;
@@ -94,14 +122,14 @@ void* ehploader_malloc(size_t size)
     }
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "smallest: %d\n", smallest, small_diff);
+    sceKernelPrintf(MODULE_NAME ": " "smallest slot: %d\n", smallest, small_diff);
 #endif
 
     uintptr_t result = (uintptr_t)ptrEhpFilesOriginal[smallest] + (ehpSizes[smallest] - ehpAllocSpaces[smallest]);
     ehpAllocSpaces[smallest] -= align_size;
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "remaining space: 0x%X\n", ehpAllocSpaces[smallest]);
+    sceKernelPrintf(MODULE_NAME ": " "remaining space in slot: 0x%X\n", ehpAllocSpaces[smallest]);
 #endif
 
     return (void*)result;
@@ -109,7 +137,7 @@ void* ehploader_malloc(size_t size)
 
 void* LoadFileToMem(const char* path)
 {
-    SceIoStat st = { 0 };
+    SceIoStat st;
     int res = sceIoGetstat(path, &st);
     if (res < 0)
     {
@@ -118,14 +146,8 @@ void* LoadFileToMem(const char* path)
 #endif
         return NULL;
     }
-
-#ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "size: 0x%X\n", *(uint32_t*)(&st.st_size));
-#endif
     void* out = ehploader_malloc(st.st_size);
-#ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "ptr: 0x%X\n", out);
-#endif
+
     if (out == NULL)
         return NULL;
 
@@ -206,8 +228,8 @@ void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
 
     const char* filename = GetTypeFilename(type);
 
-    size_t basePathLen = strlen(basePath);
-    size_t filenameLen = strlen(filename);
+    size_t basePathLen = YgSys_strlen(basePath);
+    size_t filenameLen = YgSys_strlen(filename);
     size_t totalLen = basePathLen + filenameLen + 1;
     char* completePath = (char*)psp_malloc(totalLen);
     if (completePath == NULL)
@@ -217,8 +239,8 @@ void EhFolder_CreateFromMemory_Hook(int unk, void* ptr)
 #endif
         return EhFolder_CreateFromMemory(unk, ptr);
     }
-    strcpy(completePath, basePath);
-    strcat(completePath, filename);
+    YgSys_strcpy(completePath, basePath);
+    YgSys_strcat(completePath, filename);
 
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "Loading: %s", completePath);
@@ -288,75 +310,6 @@ uintptr_t EhFolder_SearchFile_Hook(uintptr_t ptrMemEhFolder, char* filename, uin
     return EhFolder_SearchFile((uintptr_t)ptrNewEhp, filename, unk);
 }
 
-uintptr_t DiscoverPtr(uintptr_t start, uintptr_t* ptrLast)
-{
-    uintptr_t ptrLUI = 0;
-    uintptr_t ptrADD = start;
-
-    // find the first LUI after ADDIU
-    for (int i = 0; i < 10; i++)
-    {
-        uint32_t ins = *(uint32_t*)(ptrADD + (4 * i)) & 0xFFFF0000;
-        if (ins == 0x3C050000)
-        {
-            ptrLUI = ptrADD + (4 * i);
-            break;
-        }
-    }
-
-    if (ptrLUI == NULL)
-        return NULL;
-
-
-    ptrADD = NULL;
-
-    // find the first ADDIU after LUI
-    for (int i = 0; i < 10; i++)
-    {
-        uint32_t ins = *(uint32_t*)(ptrLUI + (4 * i)) & 0xFFFF0000;
-        if (ins == 0x24A50000)
-        {
-            ptrADD = ptrLUI + (4 * i);
-            break;
-        }
-    }
-
-    if (ptrADD == NULL)
-        return NULL;
-
-    uint32_t insLUI = *(uint32_t*)ptrLUI;
-    uint32_t insADD = *(uint32_t*)ptrADD;
-
-    // construct the ptr from the instructions
-    uint32_t part1 = (insLUI & 0xFFFF);
-    uint32_t part2 = (insADD & 0xFFFF);
-    // TODO: check for negative numbers, this is a signed number
-    if (part2 > 0x7FFF)
-        part1 -= 1;
-    part1 <<= 16;
-
-    uintptr_t retVal = part1 | part2;
-
-    *ptrLast = ptrADD;
-
-    return retVal;
-}
-
-uintptr_t FindInstruction(uintptr_t start, uint32_t instruction, uint32_t inscount)
-{
-    for (int i = 0; i < inscount; i++)
-    {
-        uint32_t ins = *(uint32_t*)(start + (4 * i));
-        
-        if (ins == instruction)
-        {
-            return start + (4 * i);
-        }
-    }
-
-    return 0;
-}
-
 uintptr_t FindFirstJAL(uintptr_t start, uint32_t inscount)
 {
     for (int i = 0; i < inscount; i++)
@@ -372,18 +325,12 @@ uintptr_t FindFirstJAL(uintptr_t start, uint32_t inscount)
     return 0;
 }
 
-uintptr_t GetJALDestination(uint32_t instruction)
-{
-    return (instruction & 0x03FFFFFF) << 2;
-}
-
 void EhpLoaderInject(const char* folderPath)
 {
     // TODO: hook lSoftReset and reload this plugin on reset !!
 
     //sceKernelDelayThread(100000);
-    strcpy(basePath, folderPath);
-    base_addr = injector.base_addr;
+    base_addr = minj_GetBaseAddress();
 
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "Tag Force EhFolder Loader v%d.%d", MODULE_VERSION_MAJOR, MODULE_VERSION_MINOR);
@@ -392,6 +339,8 @@ void EhpLoaderInject(const char* folderPath)
     
     sceKernelPrintf(MODULE_NAME ": " "Searching functions");
 #endif
+
+
 
     int bInTF6 = 0;
     int bUMDLoad = 0;
@@ -418,9 +367,80 @@ void EhpLoaderInject(const char* folderPath)
         return;
     }
 
-    char* flagFilePath = (char*)psp_malloc(strlen(basePath) + 1 + sizeof(EHP_UMDLOAD_FLAGFILENAME));
-    strcpy(flagFilePath, basePath);
-    strcat(flagFilePath, EHP_UMDLOAD_FLAGFILENAME);
+    // find the first call after the memset within 6 instructions
+    uintptr_t ptr_ptr_YgSys_Ms_GetDirPath = FindFirstJAL(ptr_lYgSysDLFile_GetFileList_4998C, 6);
+    if (ptr_ptr_YgSys_Ms_GetDirPath == 0)
+    {
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf(MODULE_NAME ": " "ERROR: Cannot detect Tag Force! Exiting...");
+#endif
+        return;
+    }
+
+    uintptr_t ptr_YgSys_Ms_GetDirPath = minj_GetBranchDestination(ptr_ptr_YgSys_Ms_GetDirPath);
+    uintptr_t ptr_YgSys_Ms_GetDirName = minj_GetBranchDestination((ptr_YgSys_Ms_GetDirPath + 0x1C));
+
+    YgSys_Ms_GetDirName = (void (*)(char*))(ptr_YgSys_Ms_GetDirName);
+
+    YgSys_Ms_GetDirName(GameSerial);
+    GameSerial[9] = '\0';
+
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "Detected game: %s", GameSerial);
+#endif
+
+    if ((tf_strstr(GameSerial, "ULJM05940")) || (tf_strstr(GameSerial, "NPJH00142")))
+    {
+        bInTF6 = 1;
+#ifdef EHPLOADER_DEBUG_PRINTS
+        sceKernelPrintf(MODULE_NAME ": " "Using TF6/Special mode!");
+#endif
+    }
+    // find stdlib functions in the exe first!
+    if (bInTF6)
+    {
+        uintptr_t funcPtr = pattern.get_first("00 00 86 80 08 00 C0 50 00 00 82 90 00 00 A7 80", 0);
+        YgSys_strcmp = (int (*)(const char*, const char*))(funcPtr);
+
+        funcPtr = pattern.get_first("00 00 86 80 05 00 C0 10 25 28 80 00 01 00 84 24", 0);
+        YgSys_strlen = (size_t(*)(const char*))(funcPtr);
+
+        // funcPtr = minj_GetBranchDestination(ptr_YgSys_Ms_GetDirName + 0x14);
+        // YgSys_strcpy = (char* (*)(char*, const char*))(funcPtr);
+        // 
+        // funcPtr = minj_GetBranchDestination(ptr_YgSys_Ms_GetDirName + 0x24);
+        // YgSys_strcat = (char* (*)(char*, const char*))(funcPtr);
+    }
+    else
+    {
+        uintptr_t ptr_wctomb_r_12500 = pattern.get_first("00 00 B0 AF 10 00 BF AF ? ? ? ? ? ? ? ? 02 00 42 2C", 0) + 8;
+        uintptr_t funcPtr = minj_GetBranchDestination(ptr_wctomb_r_12500);
+        YgSys_strlen = (size_t(*)(const char*))(funcPtr);
+
+        uintptr_t ptr_lEhScript_ThreadMain_38D50 = pattern.get_first("58 00 03 AE 04 00 04 26 ? ? ? ? ? ? A5 24", 0) + 8;
+        funcPtr = minj_GetBranchDestination(ptr_lEhScript_ThreadMain_38D50);
+        YgSys_strcmp = (int (*)(const char*, const char*))(funcPtr);
+
+        // uintptr_t ptr_lEhScript_ThreadMain_18834 = pattern.get_first("21 40 00 00 24 00 04 26 ? ? ? ? 04 00 05 26", 0) + 8;
+        // funcPtr = minj_GetBranchDestination(ptr_lEhScript_ThreadMain_18834);
+        // YgSys_strcpy = (char* (*)(char*, const char*))(funcPtr);
+    }
+
+    YgSys_strcpy = (char* (*)(char*, const char*))(minj_GetBranchDestination(ptr_YgSys_Ms_GetDirPath + 0x14));
+    YgSys_strcat = (char* (*)(char*, const char*))(minj_GetBranchDestination(ptr_YgSys_Ms_GetDirPath + 0x28));
+
+#ifdef EHPLOADER_DEBUG_PRINTS
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_strcmp: 0x%X", YgSys_strcmp);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_strlen: 0x%X", YgSys_strlen);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_strcpy: 0x%X", YgSys_strcpy);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_strcat: 0x%X", YgSys_strcat);
+#endif
+
+    YgSys_strcpy(basePath, folderPath);
+
+    char* flagFilePath = (char*)psp_malloc(YgSys_strlen(basePath) + 1 + sizeof(EHP_UMDLOAD_FLAGFILENAME));
+    YgSys_strcpy(flagFilePath, basePath);
+    YgSys_strcat(flagFilePath, EHP_UMDLOAD_FLAGFILENAME);
     SceUID f = sceIoOpen(flagFilePath, PSP_O_RDONLY, 0);
     if (f < 0)
         bUMDLoad = 0;
@@ -434,43 +454,22 @@ void EhpLoaderInject(const char* folderPath)
     }
     psp_free(flagFilePath);
 
-    
-    // find the first call after the memset within 6 instructions
-    uintptr_t ptr_ptr_YgSys_Ms_GetDirPath = FindFirstJAL(ptr_lYgSysDLFile_GetFileList_4998C, 6);
-    if (ptr_ptr_YgSys_Ms_GetDirPath == 0)
-    {
-#ifdef EHPLOADER_DEBUG_PRINTS
-        sceKernelPrintf(MODULE_NAME ": " "ERROR: Cannot detect Tag Force! Exiting...");
-#endif
-        return;
-    }
-
-    uintptr_t ptr_YgSys_Ms_GetDirPath = GetJALDestination(*(uint32_t*)ptr_ptr_YgSys_Ms_GetDirPath);
-    uintptr_t ptr_YgSys_Ms_GetDirName = GetJALDestination(*(uint32_t*)(ptr_YgSys_Ms_GetDirPath + 0x1C));
-    
-    YgSys_Ms_GetDirName = (void (*)(char*))(ptr_YgSys_Ms_GetDirName);
-    
-    YgSys_Ms_GetDirName(GameSerial);
-    GameSerial[strlen(GameSerial) - 4] = '\0';
 
     if (bUMDLoad)
     {
-        strcpy(basePath, "disc0:/PSP_GAME/USRDIR/" EHP_SUBFOLDER_NAME "/");
+        YgSys_strcpy(basePath, "disc0:/PSP_GAME/USRDIR/" EHP_SUBFOLDER_NAME "/");
     }
     else
     {
-        strcat(basePath, EHP_SUBFOLDER_NAME "/");
-        strcat(basePath, GameSerial);
-        strcat(basePath, "/");
+        YgSys_strcat(basePath, EHP_SUBFOLDER_NAME "/");
+        YgSys_strcat(basePath, GameSerial);
+        YgSys_strcat(basePath, "/");
     }
 
 #ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "Detected game: %s", GameSerial);
+    //sceKernelPrintf(MODULE_NAME ": " "Detected game: %s", GameSerial);
     sceKernelPrintf(MODULE_NAME ": " "BasePath: %s", basePath);
 #endif
-
-    if ((strcmp(GameSerial, "ULJM05940") == 0) || (strcmp(GameSerial, "NPJH00142") == 0))
-        bInTF6 = 1;
 
     if (bInTF6)
     {
@@ -493,7 +492,7 @@ void EhpLoaderInject(const char* folderPath)
     }
 
     // we can get this function from YgSys_InitApplication
-    ptr_EhFolder_CreateFromMemory = GetJALDestination(*(uint32_t*)(FindFirstJAL(ptr_YgSys_InitApplication, 10)));
+    ptr_EhFolder_CreateFromMemory = minj_GetBranchDestination((FindFirstJAL(ptr_YgSys_InitApplication, 10)));
 
 
 #ifdef EHPLOADER_DEBUG_PRINTS
@@ -512,31 +511,30 @@ void EhpLoaderInject(const char* folderPath)
     lEhFolder_GetFileSizeSub = (uint32_t(*)(uintptr_t, uintptr_t))(ptr_lEhFolder_GetFileSizeSub);
 
     // replace the original EhFolder_SearchFile
-    injector.MakeJMPwNOP(ptr_EhFolder_SearchFile, (uintptr_t)&EhFolder_SearchFile_Hook);
+    minj_MakeJMPwNOP(ptr_EhFolder_SearchFile, (uintptr_t)&EhFolder_SearchFile_Hook);
     
     uint32_t numEHP = 1;
     uintptr_t ptrHookStart = 0;
-    uint32_t insJAL = (0x0C000000 | ((ptr_EhFolder_CreateFromMemory >> 2) & 0x03FFFFFF));
 
     // find the first JAL within the first 10 instructions
-    ptrHookStart = FindInstruction(ptr_YgSys_InitApplication, insJAL, 10);
+    ptrHookStart = FindFirstJAL(ptr_YgSys_InitApplication, 10);
 
     if (ptrHookStart == 0)
         return;
 
     // cname
-    injector.MakeCALL(ptrHookStart, (uintptr_t)&EhFolder_CreateFromMemory_Hook);
+    minj_MakeCALL(ptrHookStart, (uintptr_t)&EhFolder_CreateFromMemory_Hook);
 
     // hook the rest of the calls at the beginning of the function
     uintptr_t ptrJalHook = ptrHookStart + 4;
     do
     {
         // find the JAL within next 5 instructions
-        ptrJalHook = FindInstruction(ptrJalHook, insJAL, 5);
+        ptrJalHook = FindFirstJAL(ptrJalHook, 5);
 
         if (ptrJalHook)
         {
-            injector.MakeCALL(ptrJalHook, (uintptr_t)&EhFolder_CreateFromMemory_Hook);
+            minj_MakeCALL(ptrJalHook, (uintptr_t)&EhFolder_CreateFromMemory_Hook);
 #ifdef EHPLOADER_DEBUG_PRINTS
             sceKernelPrintf(MODULE_NAME ": " "Hooking EhFolder_CreateFromMemory: 0x%X", ptrJalHook);
 #endif
@@ -551,7 +549,7 @@ void EhpLoaderInject(const char* folderPath)
     for (int i = 0; i < numEHP; i++)
     {
         uintptr_t nextStart = 0;
-        uintptr_t ptrEHP = DiscoverPtr(ptrDiscoverStart, &nextStart);
+        uintptr_t ptrEHP = minj_DiscoverPtr(ptrDiscoverStart, NULL, &nextStart, MIPSR_a1);
 
         EhpPtrs[i] = ptrEHP;
 
@@ -576,7 +574,7 @@ void EhpLoaderInject(const char* folderPath)
         // get the pointer of the first filename
         char* EHPFirstFileName = (char*)((*(uint32_t*)(ptrLastEHP + 0x10)) + ptrLastEHP);
 
-        if (strstr(EHPFirstFileName, "sysmsg"))
+        if (tf_strstr(EHPFirstFileName, "sysmsg"))
             bInTF1 = 1;
 
         if (bInTF1)

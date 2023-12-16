@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../includes/psp/injector.h"
+#include "../../includes/psp/minjector.h"
 #include "../../includes/psp/patterns.h"
 
 #include "ehploader.h"
@@ -88,7 +88,7 @@ void CheckModules()
                 logPrintf("Found module " MODULE_NAME_INTERNAL);
                 logPrintf("text_addr: 0x%X\ntext_size: 0x%X", info.text_addr, info.text_size);
 #endif
-                injector.SetGameBaseAddress(info.text_addr, info.text_size);
+                minj_SetGameBaseAddress(info.text_addr, info.text_size);
                 pattern.SetGameBaseAddress(info.text_addr, info.text_size);
 
                 bFoundMainModule = 1;
@@ -99,7 +99,7 @@ void CheckModules()
                 logPrintf("PRX module " MODULE_NAME);
                 logPrintf("text_addr: 0x%X\ntext_size: 0x%X", info.text_addr, info.text_addr);
 #endif
-                injector.SetModuleBaseAddress(info.text_addr, info.text_size);
+                minj_SetModBaseAddress(info.text_addr, info.text_size);
 
                 bFoundInternalModule = 1;
             }
@@ -119,18 +119,18 @@ void CheckModules()
 
 void CheckModulesPSP()
 {
-    SceModule2 mod = { 0 };
+    SceModule2 mod;
     int kuErrCode = kuKernelFindModuleByName(MODULE_NAME_INTERNAL, &mod);
     if (kuErrCode != 0)
         return;
 
-    SceModule2 this_module = { 0 };
+    SceModule2 this_module;
     kuErrCode = kuKernelFindModuleByName(MODULE_NAME, &this_module);
     if (kuErrCode != 0)
         return;
 
-    injector.SetGameBaseAddress(mod.text_addr, mod.text_size);
-    injector.SetModuleBaseAddress(this_module.text_addr, this_module.text_addr);
+    minj_SetGameBaseAddress(mod.text_addr, mod.text_size);
+    minj_SetModBaseAddress(this_module.text_addr, this_module.text_addr);
 
     pattern.SetGameBaseAddress(mod.text_addr, mod.text_size);
 
