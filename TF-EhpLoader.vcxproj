@@ -117,8 +117,8 @@ powershell -ExecutionPolicy Bypass -File "$(SolutionDir)/external/pspsdk/vsmake.
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: If the copy directory doesn't exist, we're done, otherwise, copy the built binary
 if not exist !_PPSSPPMemstick! goto :eof
-if not exist !_PPSSPPMemstick!\PLUGINS\$(ProjectName) mkdir !_PPSSPPMemstick!\PLUGINS\$(ProjectName)
-copy /y $(NMakeOutput) !_PPSSPPMemstick!\PLUGINS\$(ProjectName)
+if not exist !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName) mkdir !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName)
+copy /y $(NMakeOutput) !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName)
 </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>@echo off
 setlocal EnableDelayedExpansion
@@ -142,8 +142,8 @@ powershell -ExecutionPolicy Bypass -File "$(SolutionDir)/external/pspsdk/vsmake.
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: If the copy directory doesn't exist, we're done, otherwise, copy the built binary
 if not exist !_PPSSPPMemstick! goto :eof
-if not exist !_PPSSPPMemstick!\PLUGINS\$(ProjectName) mkdir !_PPSSPPMemstick!\PLUGINS\$(ProjectName)
-copy /y $(NMakeOutput) !_PPSSPPMemstick!\PLUGINS\$(ProjectName)
+if not exist !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName) mkdir !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName)
+copy /y $(NMakeOutput) !_PPSSPPMemstick!\PSP\PLUGINS\$(ProjectName)
 </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>@echo off
 setlocal EnableDelayedExpansion
