@@ -28,6 +28,7 @@ int (*YgSys_strcmp)(const char*, const char*) = (int (*)(const char*, const char
 size_t(*YgSys_strlen)(const char* str) = (size_t(*)(const char*))(0);
 char* (*YgSys_strcpy)(char* dst, const char* src) = (char* (*)(char*, const char*))(0);
 char* (*YgSys_strcat)(char* dst, const char* src) = (char* (*)(char*, const char*))(0);
+void* (*YgSys_memset)(void* ptr, int value, size_t num) = (void* (*)(void*, int, size_t))(0);
 
 uintptr_t base_addr = 0;
 char basePath[128];
@@ -67,6 +68,7 @@ char* tf_strstr(register char* string, char* substring)
 //
 
 size_t ehpSizes[EHP_TYPE_COUNT];
+size_t ehpOriginalSizes[EHP_TYPE_COUNT];
 int ehpAllocSpaces[EHP_TYPE_COUNT];
 
 size_t calculate_aligned_size(size_t size, size_t alignment) 
@@ -99,7 +101,7 @@ void* ehploader_malloc(size_t size)
 #endif
 
     size_t maxalloc = ehploader_largest_malloc();
-    if (align_size > maxalloc)
+    if ((align_size >= maxalloc) && (maxalloc > 0))
     {
 #ifdef EHPLOADER_DEBUG_PRINTS
         sceKernelPrintf(MODULE_NAME ": " "alloc too large to fit in executable space (max: 0x%X)! allocing normally...", maxalloc);
@@ -131,6 +133,8 @@ void* ehploader_malloc(size_t size)
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "remaining space in slot: 0x%X\n", ehpAllocSpaces[smallest]);
 #endif
+
+    YgSys_memset((void*)result, 0xBA, align_size);
 
     return (void*)result;
 }
@@ -344,6 +348,7 @@ void EhpLoaderInject(const char* folderPath)
 
     int bInTF6 = 0;
     int bUMDLoad = 0;
+    SceIoStat st;
     
     uintptr_t ptr_lEhFolder_SearchFile = 0;
     uintptr_t ptr_lEhFolder_GetFileSizeSub = 0;
@@ -396,23 +401,32 @@ void EhpLoaderInject(const char* folderPath)
         sceKernelPrintf(MODULE_NAME ": " "Using TF6/Special mode!");
 #endif
     }
-    // find stdlib functions in the exe first!
+    // IMPORTANT: find stdlib functions in the exe first!
     if (bInTF6)
     {
+        // find functions (TF6 & Special)
+        ptr_YgSys_InitApplication = pattern.get_first("FF BD 27 ? ? 05 3C 25 20 00 00 60 00 B0 AF 64 00 B1 AF", 0) - 1;
+        ptr_lEhFolder_SearchFile = pattern.get_first("30 00 BD 27 F0 FF BD 27 00 00 BF AF ? ? ? ? 01 00 06 34", 0) + 4;
+        ptr_lEhFolder_GetFileSizeSub = pattern.get_first("F0 FF BD 27 00 00 86 8C 25 38 A0 00 00 3E C5 7C", 0);
+        //ptr_EhFolder_CreateFromMemory = pattern.get_first("F0 FF BD 27 25 30 A0 00 ? ? 05 3C ? ? A7 8C 00 00 B0 AF", 0);
+        ptr_EhFolder_SearchFile = pattern.get_first("25 88 A0 00 08 00 B2 AF 0C 00 BF AF 0C 00 80 10", 0) - 0x10;
+
         uintptr_t funcPtr = pattern.get_first("00 00 86 80 08 00 C0 50 00 00 82 90 00 00 A7 80", 0);
         YgSys_strcmp = (int (*)(const char*, const char*))(funcPtr);
 
         funcPtr = pattern.get_first("00 00 86 80 05 00 C0 10 25 28 80 00 01 00 84 24", 0);
         YgSys_strlen = (size_t(*)(const char*))(funcPtr);
-
-        // funcPtr = minj_GetBranchDestination(ptr_YgSys_Ms_GetDirName + 0x14);
-        // YgSys_strcpy = (char* (*)(char*, const char*))(funcPtr);
-        // 
-        // funcPtr = minj_GetBranchDestination(ptr_YgSys_Ms_GetDirName + 0x24);
-        // YgSys_strcat = (char* (*)(char*, const char*))(funcPtr);
     }
     else
     {
+        // TODO: add autodetect for debug builds
+        // find functions (TF1 - 5)
+        ptr_YgSys_InitApplication = pattern.get_first("FF BD 27 ? ? 05 3C 0C 00 BF AF 21 20 00 00", 0) - 1;
+        ptr_lEhFolder_SearchFile = pattern.get_first("01 00 06 24 ? ? ? ? 21 30 00 00 F0 FF BD 27", 0) - 4;
+        ptr_lEhFolder_GetFileSizeSub = pattern.get_first("F0 FF BD 27 0C 00 BF AF 08 00 B0 AF 00 00 82 8C 00 3E 42 7C", 0);
+        //ptr_EhFolder_CreateFromMemory = pattern.get_first("F0 FF BD 27 0C 00 BF AF ? ? 02 3C ? ? 42 8C 03 00 40 50", 0);
+        ptr_EhFolder_SearchFile = pattern.get_first("00 00 B0 AF 21 90 80 00 21 80 A0 00 05 00 40 12 21 88 C0 00", 0) - 0x10;
+
         uintptr_t ptr_wctomb_r_12500 = pattern.get_first("00 00 B0 AF 10 00 BF AF ? ? ? ? ? ? ? ? 02 00 42 2C", 0) + 8;
         uintptr_t funcPtr = minj_GetBranchDestination(ptr_wctomb_r_12500);
         YgSys_strlen = (size_t(*)(const char*))(funcPtr);
@@ -420,20 +434,46 @@ void EhpLoaderInject(const char* folderPath)
         uintptr_t ptr_lEhScript_ThreadMain_38D50 = pattern.get_first("58 00 03 AE 04 00 04 26 ? ? ? ? ? ? A5 24", 0) + 8;
         funcPtr = minj_GetBranchDestination(ptr_lEhScript_ThreadMain_38D50);
         YgSys_strcmp = (int (*)(const char*, const char*))(funcPtr);
-
-        // uintptr_t ptr_lEhScript_ThreadMain_18834 = pattern.get_first("21 40 00 00 24 00 04 26 ? ? ? ? 04 00 05 26", 0) + 8;
-        // funcPtr = minj_GetBranchDestination(ptr_lEhScript_ThreadMain_18834);
-        // YgSys_strcpy = (char* (*)(char*, const char*))(funcPtr);
     }
 
     YgSys_strcpy = (char* (*)(char*, const char*))(minj_GetBranchDestination(ptr_YgSys_Ms_GetDirPath + 0x14));
     YgSys_strcat = (char* (*)(char*, const char*))(minj_GetBranchDestination(ptr_YgSys_Ms_GetDirPath + 0x28));
+
+    // we can get this function from YgSys_InitApplication
+    uintptr_t ptrjal_EhFolder_CreateFromMemory = FindFirstJAL(ptr_YgSys_InitApplication, 10);
+    if (ptrjal_EhFolder_CreateFromMemory == 0)
+        return;
+    ptr_EhFolder_CreateFromMemory = minj_GetBranchDestination(ptrjal_EhFolder_CreateFromMemory);
+    uintptr_t ptrjal_memset = ptrjal_EhFolder_CreateFromMemory + 4;
+    uintptr_t ptr_memset = 0;
+
+    // find memset in YgSys_InitApplication within first 8 function calls
+    // it is the first different function call to EhFolder_CreateFromMemory
+    for (int i = 0; i < 8; i++)
+    {
+        ptrjal_memset = FindFirstJAL(ptrjal_memset, 10);
+        ptr_memset = minj_GetBranchDestination(ptrjal_memset);
+        if (ptr_memset != ptr_EhFolder_CreateFromMemory)
+        {
+            break;
+        }
+        ptrjal_memset += 4;
+    }
+
+    YgSys_memset = (void* (*)(void*, int, size_t))(ptr_memset);
 
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "YgSys_strcmp: 0x%X", YgSys_strcmp);
     sceKernelPrintf(MODULE_NAME ": " "YgSys_strlen: 0x%X", YgSys_strlen);
     sceKernelPrintf(MODULE_NAME ": " "YgSys_strcpy: 0x%X", YgSys_strcpy);
     sceKernelPrintf(MODULE_NAME ": " "YgSys_strcat: 0x%X", YgSys_strcat);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_memset: 0x%X", YgSys_memset);
+    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_SearchFile: 0x%X", ptr_lEhFolder_SearchFile);
+    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_GetFileSizeSub: 0x%X", ptr_lEhFolder_GetFileSizeSub);
+    sceKernelPrintf(MODULE_NAME ": " "EhFolder_CreateFromMemory: 0x%X", ptr_EhFolder_CreateFromMemory);
+    sceKernelPrintf(MODULE_NAME ": " "YgSys_InitApplication: 0x%X", ptr_YgSys_InitApplication);
+
+    sceKernelPrintf(MODULE_NAME ": " "Function search done");
 #endif
 
     YgSys_strcpy(basePath, folderPath);
@@ -441,8 +481,7 @@ void EhpLoaderInject(const char* folderPath)
     char* flagFilePath = (char*)psp_malloc(YgSys_strlen(basePath) + 1 + sizeof(EHP_UMDLOAD_FLAGFILENAME));
     YgSys_strcpy(flagFilePath, basePath);
     YgSys_strcat(flagFilePath, EHP_UMDLOAD_FLAGFILENAME);
-    SceUID f = sceIoOpen(flagFilePath, PSP_O_RDONLY, 0);
-    if (f < 0)
+    if (sceIoGetstat(flagFilePath, &st) < 0)
         bUMDLoad = 0;
     else
     {
@@ -450,7 +489,6 @@ void EhpLoaderInject(const char* folderPath)
         sceKernelPrintf(MODULE_NAME ": " "UMDLOAD enabled!");
 #endif
         bUMDLoad = 1;
-        sceIoClose(f);
     }
     psp_free(flagFilePath);
 
@@ -470,40 +508,7 @@ void EhpLoaderInject(const char* folderPath)
     //sceKernelPrintf(MODULE_NAME ": " "Detected game: %s", GameSerial);
     sceKernelPrintf(MODULE_NAME ": " "BasePath: %s", basePath);
 #endif
-
-    if (bInTF6)
-    {
-        // find functions (TF6 & Special)
-        ptr_lEhFolder_SearchFile = pattern.get_first("30 00 BD 27 F0 FF BD 27 00 00 BF AF ? ? ? ? 01 00 06 34", 0) + 4;
-        ptr_lEhFolder_GetFileSizeSub = pattern.get_first("F0 FF BD 27 00 00 86 8C 25 38 A0 00 00 3E C5 7C", 0);
-        //ptr_EhFolder_CreateFromMemory = pattern.get_first("F0 FF BD 27 25 30 A0 00 ? ? 05 3C ? ? A7 8C 00 00 B0 AF", 0);
-        ptr_EhFolder_SearchFile = pattern.get_first("25 88 A0 00 08 00 B2 AF 0C 00 BF AF 0C 00 80 10", 0) - 0x10;
-        ptr_YgSys_InitApplication = pattern.get_first("FF BD 27 ? ? 05 3C 25 20 00 00 60 00 B0 AF 64 00 B1 AF", 0) - 1;
-    }
-    else
-    {
-        // TODO: add autodetect for debug builds
-        // find functions (TF1 - 5)
-        ptr_lEhFolder_SearchFile = pattern.get_first("01 00 06 24 ? ? ? ? 21 30 00 00 F0 FF BD 27", 0) - 4;
-        ptr_lEhFolder_GetFileSizeSub = pattern.get_first("F0 FF BD 27 0C 00 BF AF 08 00 B0 AF 00 00 82 8C 00 3E 42 7C", 0);
-        //ptr_EhFolder_CreateFromMemory = pattern.get_first("F0 FF BD 27 0C 00 BF AF ? ? 02 3C ? ? 42 8C 03 00 40 50", 0);
-        ptr_EhFolder_SearchFile = pattern.get_first("00 00 B0 AF 21 90 80 00 21 80 A0 00 05 00 40 12 21 88 C0 00", 0) - 0x10;
-        ptr_YgSys_InitApplication = pattern.get_first("FF BD 27 ? ? 05 3C 0C 00 BF AF 21 20 00 00", 0) - 1;
-    }
-
-    // we can get this function from YgSys_InitApplication
-    ptr_EhFolder_CreateFromMemory = minj_GetBranchDestination((FindFirstJAL(ptr_YgSys_InitApplication, 10)));
-
-
-#ifdef EHPLOADER_DEBUG_PRINTS
-    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_SearchFile: 0x%X", ptr_lEhFolder_SearchFile);
-    sceKernelPrintf(MODULE_NAME ": " "lEhFolder_GetFileSizeSub: 0x%X", ptr_lEhFolder_GetFileSizeSub);
-    sceKernelPrintf(MODULE_NAME ": " "EhFolder_CreateFromMemory: 0x%X", ptr_EhFolder_CreateFromMemory);
-    sceKernelPrintf(MODULE_NAME ": " "EhFolder_SearchFile: 0x%X", ptr_EhFolder_SearchFile);
-    sceKernelPrintf(MODULE_NAME ": " "YgSys_InitApplication: 0x%X", ptr_YgSys_InitApplication);
-
-    sceKernelPrintf(MODULE_NAME ": " "Function search done");
-#endif
+    
 
     // update func addresses
     EhFolder_CreateFromMemory = (void (*)(int, void*))(ptr_EhFolder_CreateFromMemory);
@@ -600,18 +605,69 @@ void EhpLoaderInject(const char* folderPath)
     {
         if (ptrEhpFilesOriginal[i] != NULL)
         {
-            ehpSizes[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
-            ehpAllocSpaces[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+            ehpOriginalSizes[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+            // if the file exists, then set the available allocation space
+            size_t basePathLen = YgSys_strlen(basePath);
+            size_t filenameLen = YgSys_strlen(GetTypeFilename((EhpType)i));
+            size_t totalLen = basePathLen + filenameLen + 1;
+            char* completePath = (char*)psp_malloc(totalLen);
+            if (completePath == NULL)
+            {
+                continue;
+            }
+            YgSys_strcpy(completePath, basePath);
+            YgSys_strcat(completePath, GetTypeFilename((EhpType)i));
+
+            if (sceIoGetstat(completePath, &st) >= 0)
+            {
+                ehpSizes[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+                ehpAllocSpaces[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+            }
+
+            psp_free(completePath);
         }
     }
 
+	// attempt to create contiguous blocks by scanning EhFolders that are placed in sequence
+	for (int i = 0; i < EHP_TYPE_COUNT; i++)
+	{
+		if ((ptrEhpFilesOriginal[i] != NULL) && (ehpSizes[i] > 0))
+		{
+			// if at the end of the buffer there is another EHP
+//#ifdef EHPLOADER_DEBUG_PRINTS
+//			sceKernelPrintf(MODULE_NAME ": " "looking at: 0x%X", (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i]);
+//#endif
+			uint32_t magic = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i]);
+			if ((magic & 0xFFFFFF) == EHP_MAGIC)
+			{
+				uintptr_t searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
+				// find which one it is and combine it
+				for (int j = 0; j < EHP_TYPE_COUNT; j++)
+				{
+					if ((searchPtr == (uintptr_t)(ptrEhpFilesOriginal[j])) && (ehpSizes[j] > 0))
+					{
+#ifdef EHPLOADER_DEBUG_PRINTS
+						sceKernelPrintf(MODULE_NAME ": " "Combining slots %d and %d", i, j);
+						sceKernelPrintf(MODULE_NAME ": " "Size: 0x%X + 0x%X = 0x%X", ehpSizes[i], ehpSizes[j], ehpSizes[i] + ehpSizes[j]);
+#endif
+						ehpSizes[i] += ehpSizes[j];
+						ehpAllocSpaces[i] = ehpSizes[i];
+						ehpSizes[j] = 0;
+						ehpAllocSpaces[j] = 0;
+						searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
+					}
+				}
+			}
+		}
+	}
+
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "===EhFolder ptrs:===");
-    sceKernelPrintf(MODULE_NAME ": " "CNAME: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_CNAME], ehpSizes[EHP_TYPE_CNAME]);
-    sceKernelPrintf(MODULE_NAME ": " "INTERFACE: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_INTERFACE], ehpSizes[EHP_TYPE_INTERFACE]);
-    sceKernelPrintf(MODULE_NAME ": " "RCPSET: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_RCPSET], ehpSizes[EHP_TYPE_RCPSET]);
-    sceKernelPrintf(MODULE_NAME ": " "LOAD_FL: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL], ehpSizes[EHP_TYPE_LOAD_FL]);
-    sceKernelPrintf(MODULE_NAME ": " "SYSMSG: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_SYSMSG], ehpSizes[EHP_TYPE_SYSMSG]);
-    sceKernelPrintf(MODULE_NAME ": " "PACKSET: 0x%X\tsize: 0x%X", ptrEhpFilesOriginal[EHP_TYPE_PACKSET], ehpSizes[EHP_TYPE_PACKSET]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] CNAME:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_CNAME, ptrEhpFilesOriginal[EHP_TYPE_CNAME], ehpOriginalSizes[EHP_TYPE_CNAME], ehpSizes[EHP_TYPE_CNAME]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] INTERFACE:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_INTERFACE, ptrEhpFilesOriginal[EHP_TYPE_INTERFACE], ehpOriginalSizes[EHP_TYPE_INTERFACE], ehpSizes[EHP_TYPE_INTERFACE]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] RCPSET:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_RCPSET, ptrEhpFilesOriginal[EHP_TYPE_RCPSET], ehpOriginalSizes[EHP_TYPE_RCPSET], ehpSizes[EHP_TYPE_RCPSET]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] LOAD_FL:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_LOAD_FL, ptrEhpFilesOriginal[EHP_TYPE_LOAD_FL], ehpOriginalSizes[EHP_TYPE_LOAD_FL], ehpSizes[EHP_TYPE_LOAD_FL]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] SYSMSG:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_SYSMSG, ptrEhpFilesOriginal[EHP_TYPE_SYSMSG], ehpOriginalSizes[EHP_TYPE_SYSMSG], ehpSizes[EHP_TYPE_SYSMSG]);
+    sceKernelPrintf(MODULE_NAME ": " "[%d] PACKSET:\t 0x%08X\tsize: 0x%X (csize: 0x%X)", EHP_TYPE_PACKSET, ptrEhpFilesOriginal[EHP_TYPE_PACKSET], ehpOriginalSizes[EHP_TYPE_PACKSET], ehpSizes[EHP_TYPE_PACKSET]);
 #endif
 }
