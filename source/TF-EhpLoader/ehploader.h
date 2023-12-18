@@ -5,7 +5,7 @@
 #define MODULE_NAME "TF-EhpLoader"
 
 #define MODULE_VERSION_MAJOR 1
-#define MODULE_VERSION_MINOR 3
+#define MODULE_VERSION_MINOR 4
 
 #define EHP_NAME_CNAME				"cname.ehp"
 #define EHP_NAME_INTERFACE			"interface.ehp"
@@ -30,6 +30,7 @@ typedef enum _EhpType
 }EhpType;
 
 #define EHP_MAGIC 0x504845
+#define EHP_NOT_BIND_ID 0x20544F4E
 
 // Forward-declare
 void EhpLoaderInject(const char* folderPath);

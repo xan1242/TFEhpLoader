@@ -605,7 +605,21 @@ void EhpLoaderInject(const char* folderPath)
     {
         if (ptrEhpFilesOriginal[i] != NULL)
         {
+            // check the bind magic! if it's not "NOT " then the EhFolder has been tampered with
+            // this is because of some fan translations incorrectly packing in the EHP and chopping off the size,
+            // which causes various issues with the custom allocator and the game behavior
+            // since we can't know the exact size (we can only assume the expected one), the next best thing is this
+            uint32_t bindmagic = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t) + sizeof(uint32_t));
+            if (bindmagic != EHP_NOT_BIND_ID)
+            {
+#ifdef EHPLOADER_DEBUG_PRINTS
+                sceKernelPrintf(MODULE_NAME ": " "WARNING: %d has wrong bind magic! EhFolder has been tampered with! Skipping...", i);
+#endif
+                continue;
+            }
+
             ehpOriginalSizes[i] = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + sizeof(uint32_t));
+
             // if the file exists, then set the available allocation space
             size_t basePathLen = YgSys_strlen(basePath);
             size_t filenameLen = YgSys_strlen(GetTypeFilename((EhpType)i));
@@ -628,38 +642,38 @@ void EhpLoaderInject(const char* folderPath)
         }
     }
 
-	// attempt to create contiguous blocks by scanning EhFolders that are placed in sequence
-	for (int i = 0; i < EHP_TYPE_COUNT; i++)
-	{
-		if ((ptrEhpFilesOriginal[i] != NULL) && (ehpSizes[i] > 0))
-		{
-			// if at the end of the buffer there is another EHP
+    // attempt to create contiguous blocks by scanning EhFolders that are placed in sequence
+    for (int i = 0; i < EHP_TYPE_COUNT; i++)
+    {
+        if ((ptrEhpFilesOriginal[i] != NULL) && (ehpSizes[i] > 0))
+        {
+            // if at the end of the buffer there is another EHP
 //#ifdef EHPLOADER_DEBUG_PRINTS
 //			sceKernelPrintf(MODULE_NAME ": " "looking at: 0x%X", (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i]);
 //#endif
-			uint32_t magic = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i]);
-			if ((magic & 0xFFFFFF) == EHP_MAGIC)
-			{
-				uintptr_t searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
-				// find which one it is and combine it
-				for (int j = 0; j < EHP_TYPE_COUNT; j++)
-				{
-					if ((searchPtr == (uintptr_t)(ptrEhpFilesOriginal[j])) && (ehpSizes[j] > 0))
-					{
+            uint32_t magic = *(uint32_t*)((uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i]);
+            if ((magic & 0xFFFFFF) == EHP_MAGIC)
+            {
+                uintptr_t searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
+                // find which one it is and combine it
+                for (int j = 0; j < EHP_TYPE_COUNT; j++)
+                {
+                    if ((searchPtr == (uintptr_t)(ptrEhpFilesOriginal[j])) && (ehpSizes[j] > 0))
+                    {
 #ifdef EHPLOADER_DEBUG_PRINTS
-						sceKernelPrintf(MODULE_NAME ": " "Combining slots %d and %d", i, j);
-						sceKernelPrintf(MODULE_NAME ": " "Size: 0x%X + 0x%X = 0x%X", ehpSizes[i], ehpSizes[j], ehpSizes[i] + ehpSizes[j]);
+                        sceKernelPrintf(MODULE_NAME ": " "Combining slots %d and %d", i, j);
+                        sceKernelPrintf(MODULE_NAME ": " "Size: 0x%X + 0x%X = 0x%X", ehpSizes[i], ehpSizes[j], ehpSizes[i] + ehpSizes[j]);
 #endif
-						ehpSizes[i] += ehpSizes[j];
-						ehpAllocSpaces[i] = ehpSizes[i];
-						ehpSizes[j] = 0;
-						ehpAllocSpaces[j] = 0;
-						searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
-					}
-				}
-			}
-		}
-	}
+                        ehpSizes[i] += ehpSizes[j];
+                        ehpAllocSpaces[i] = ehpSizes[i];
+                        ehpSizes[j] = 0;
+                        ehpAllocSpaces[j] = 0;
+                        searchPtr = (uintptr_t)ptrEhpFilesOriginal[i] + ehpSizes[i];
+                    }
+                }
+            }
+        }
+    }
 
 #ifdef EHPLOADER_DEBUG_PRINTS
     sceKernelPrintf(MODULE_NAME ": " "===EhFolder ptrs:===");
